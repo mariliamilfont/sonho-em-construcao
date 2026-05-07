@@ -879,25 +879,25 @@ def create_level():
             {"x":450, "y":165, "w":120, "h":20, "type":"static"},
             {"x":700, "y":100, "w":80, "h":20, "type":"goal"}
         ]
-        # enemies = [
-        #     {"x":575, "y":340, "r":15, "dir":1, "speed":1.5, "min_x":525, "max_x":635}
-        # ]
+        enemies = [
+            {"x":575, "y":340, "r":15, "dir":1, "speed":1.5, "min_x":525, "max_x":635}
+        ]
 
     elif level == 3:
         platforms = [
             {"x":30, "y":540, "w":130, "h":20, "type":"static"},
-            {"x":200, "y":510, "w":30, "h":20, "type":"static"},
-            {"x":330, "y":465, "w":110, "h":20, "type":"move", "dir":1, "speed":2.3, "min_x":280, "max_x":460},
-            {"x":200, "y":415, "w":110, "h":20, "type":"static"},
-            {"x":350, "y":325, "w":80, "h":20, "type":"static"},
-            {"x":570, "y":290, "w":120, "h":20, "type":"static"},
-            {"x":660, "y":240, "w":90, "h":20, "type":"move", "dir":-1, "speed":2.5, "min_x":520, "max_x":700},
-            {"x":420, "y":160, "w":110, "h":20, "type":"static"},
-            {"x":700, "y":100, "w":80, "h":20, "type":"goal"}
+            {"x":200, "y":510, "w":110, "h":20, "type":"static"},
+            {"x":330, "y":435, "w":110, "h":20, "type":"move", "dir":1, "speed":2.0, "min_x":280, "max_x":460},
+            {"x":180, "y":380, "w":110, "h":20, "type":"static"},
+            {"x":350, "y":300, "w":80, "h":20, "type":"static"},
+            {"x":660, "y":240, "w":90, "h":20, "type":"move", "dir":-1, "speed":2.3, "min_x":480, "max_x":650},
+            {"x":400, "y":152, "w":80, "h":20, "type":"static"},
+            {"x":580, "y":110, "w":30, "h":10, "type":"static"},
+            {"x":700, "y":80, "w":80, "h":20, "type":"goal"}
         ]
         enemies = [
-            {"x":225, "y":395, "r":15, "dir":1, "speed":2.0, "min_x":250, "max_x":350},
-            {"x":610, "y":278, "r":16, "dir":-1, "speed":2.2, "min_x":550, "max_x":690}
+            {"x":225, "y":360, "r":15, "dir":1, "speed":1.5, "min_x":200, "max_x":300},
+            # {"x":610, "y":278, "r":16, "dir":-1, "speed":2.0, "min_x":550, "max_x":690}
         ]
 
     # Reseta cache da fase para garantir consistencia apos troca.
