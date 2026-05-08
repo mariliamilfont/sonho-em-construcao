@@ -4,6 +4,12 @@ import math
 from collections import defaultdict
 
 pygame.init()
+pygame.mixer.init()
+
+# ================== MUSICA ==================
+pygame.mixer.music.load("assets/music/musica.mp3")
+pygame.mixer.music.set_volume(0.5)  # volume de 0.0 até 1.0
+pygame.mixer.music.play(-1)  # -1 = loop infinito
 
 # ================== JANELA E VIEWPORT ==================
 # Coordenadas de Dispositivo (Tela): 800x600 pixels
