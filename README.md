@@ -2,7 +2,7 @@
 
 ## Sobre o Projeto
 
-**Sonhos em Construção** é um jogo 2D desenvolvido em Python utilizando a biblioteca :contentReference[oaicite:0]{index=0}.  
+**Sonhos em Construção** é um jogo 2D desenvolvido em Python utilizando a biblioteca   
 O jogo acompanha a personagem **Luna** em uma jornada pelos seus sonhos, passando por diferentes mundos:
 
 - Céu Azul
@@ -201,35 +201,57 @@ projeto/
 
 ## Fase 1 — Céu Azul
 
-Primeira etapa da jornada de Luna.
+A primeira fase representa o início dos sonhos de Luna, um momento leve e cheio de esperança, onde tudo parece possível. O cenário foi construído para transmitir tranquilidade, imaginação e descoberta, simbolizando os primeiros passos da personagem em direção aos seus objetivos.
 
 Características:
-- Céu claro
+- Céu azul com ambientação suave
 - Nuvens desenhadas proceduralmente
-- Arco-íris
-- Plataformas móveis
+- Arco-íris conectado à plataforma final
+- Plataformas móveis e escaláveis
+- Atmosfera leve e acolhedora
+- Introdução gradual às mecânicas do jogo
+
+Objetivo narrativo:
+Esta fase simboliza a inocência dos sonhos e a coragem de começar uma nova jornada.
 
 ---
 
 ## Fase 2 — Espaço
 
-Representa os medos e incertezas.
+A segunda fase representa o momento em que Luna precisa enfrentar seus medos, inseguranças e incertezas. O ambiente espacial transmite solidão e desafio, contrastando com a leveza da fase anterior.
+
+As plataformas mais difíceis e os inimigos reforçam a ideia de obstáculos emocionais e dificuldades que surgem durante a construção de um sonho.
 
 Características:
-- Fundo espacial texturizado
-- Inimigos alienígenas
-- Plataformas dinâmicas
+- Fundo espacial totalmente texturizado
+- Ambientação escura e misteriosa
+- Inimigos alienígenas com movimentação dinâmica
+- Plataformas móveis e obstáculos mais desafiadores
+- Sensação de profundidade e isolamento
+- Aumento gradual da dificuldade
+
+Objetivo narrativo:
+Esta fase representa os desafios internos e externos enfrentados ao perseguir objetivos e crescer pessoalmente.
+
 
 ---
 
 ## Fase 3 — Mundo dos Doces
 
-Última fase da jornada.
+A última fase simboliza a realização dos sonhos de Luna. Após enfrentar dificuldades e atravessar o desconhecido, ela encontra um mundo colorido e fantástico, construído a partir de tudo o que viveu ao longo da jornada.
+
+Apesar da aparência divertida e doce, a fase apresenta os maiores desafios do jogo, mostrando que conquistar um sonho exige persistência até o final.
 
 Características:
-- Cenário doce
+- Cenário inspirado em doces e fantasia
+- Fundo texturizado colorido
 - Monstros temáticos
-- Plataformas mais difíceis
+- Plataformas menores e mais difíceis
+- Movimentação mais dinâmica
+- Estética vibrante e acolhedora
+
+Objetivo narrativo:
+A fase representa a conquista dos sonhos, a autenticidade da personagem e a construção da própria felicidade.
 
 ---
 

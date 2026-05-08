@@ -17,14 +17,12 @@ def handle_state_event(event, game_state, level, player, vel_y, create_level_fn,
         level = 1
         player.x, player.y = 100, 400
         vel_y = 0
-        create_level_fn()
         return game_state, level, vel_y, False, "game"
 
     if game_state == "dead" and event.type == pygame_module.KEYDOWN and event.key == pygame_module.K_r:
         level = 1
         player.x, player.y = 100, 400
         vel_y = 0
-        create_level_fn()
         return game_state, level, vel_y, False, "game"
 
     if game_state in ("win", "dead") and event.type == pygame_module.KEYDOWN and event.key == pygame_module.K_ESCAPE:
