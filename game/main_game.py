@@ -181,6 +181,20 @@ casa_cache = cache_resize_cache_nearest(casa_src_cache, casa_src_w, casa_src_h, 
 #   offset_x, offset_y = translação (pan)
 #   zoom = escala (zoom in/out)
 
+def rotate_point(x, y, cx, cy, angle):
+    rad = math.radians(angle)
+    
+    # Translada para origem
+    tx = x - cx
+    ty = y - cy
+    
+    # Rotação
+    rx = tx * math.cos(rad) - ty * math.sin(rad)
+    ry = tx * math.sin(rad) + ty * math.cos(rad)
+    
+    # Volta para posição original
+    return int(rx + cx), int(ry + cy)
+
 def set_pixel(x, y, color):
     global draw_surface
     feature_set_pixel(draw_surface, WIDTH, HEIGHT, offset_x, offset_y, zoom, x, y, color)
@@ -726,6 +740,39 @@ def draw_ufo_with_ellipses(cx, cy, scale=1.0):
         draw_filled_circle(lx, ly, int(6 * s), (110, 240, 120))
         draw_circle(lx, ly, int(6 * s), (85, 210, 110))
 
+def draw_rotating_image(cx, cy, image_cache, angle):
+    h = len(image_cache)
+    w = len(image_cache[0])
+
+    rad = math.radians(angle)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+
+    # centro da imagem original
+    ox = w // 2
+    oy = h // 2
+
+    for x in range(w):
+        for y in range(h):
+            color = image_cache[x][y]
+
+            # ignora transparência
+            if color[3] < 128:
+                continue
+
+            # coordenadas relativas ao centro
+            tx = x - ox
+            ty = y - oy
+
+            # 🔄 rotação geométrica (ESSENCIAL)
+            rx = tx * cos_a - ty * sin_a
+            ry = tx * sin_a + ty * cos_a
+
+            # posição final na tela
+            screen_x = int(cx + rx)
+            screen_y = int(cy + ry)
+
+            set_pixel(screen_x, screen_y, color)
 
 def build_menu_surface():
     global draw_surface
@@ -1044,9 +1091,13 @@ def draw_win():
 def draw_dead():
     feature_draw_dead(screen, dead_surface)
 
+alien_angle = 0
+
 # ================== LOOP ==================
 while True:
     clock.tick(60)
+
+    alien_angle += 1  # controla velocidade
 
     keys = pygame.key.get_pressed()
     zoom = feature_apply_zoom_keys(keys, zoom, pygame)
@@ -1067,6 +1118,7 @@ while True:
 
     if game_state == "menu":
         draw_menu()
+        draw_rotating_image(700, 450, alien_cache, alien_angle)
 
     elif game_state == "game":
         if level == 1:
