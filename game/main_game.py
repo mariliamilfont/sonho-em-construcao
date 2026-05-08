@@ -696,6 +696,37 @@ def draw_house(x, y, scale=1.0):
     )
 
 
+def draw_ufo_with_ellipses(cx, cy, scale=1.0):
+    s = scale
+
+    # Base do OVNI: preenchimento manual por múltiplas elipses.
+    base_rx = int(120 * s)
+    base_ry = int(42 * s)
+    for ry in range(base_ry, 0, -1):
+        draw_ellipse(cx, cy, base_rx, ry, (82, 97, 108))
+    draw_ellipse(cx, cy, base_rx, base_ry, (120, 136, 148))
+
+    # Cúpula superior.
+    dome_cx = cx
+    dome_cy = cy - int(34 * s)
+    dome_rx = int(52 * s)
+    dome_ry = int(28 * s)
+    for ry in range(dome_ry, 0, -1):
+        draw_ellipse(dome_cx, dome_cy, dome_rx, ry, (84, 214, 218))
+    draw_ellipse(dome_cx, dome_cy, dome_rx, dome_ry, (60, 190, 200))
+
+    # Brilho da cúpula.
+    draw_ellipse(dome_cx + int(16 * s), dome_cy - int(9 * s), int(14 * s), int(6 * s), (225, 225, 210))
+
+    # Luzes da base.
+    lights = 6
+    for i in range(lights):
+        lx = cx - int(88 * s) + int(i * (176 * s) / (lights - 1))
+        ly = cy - int(1 * s)
+        draw_filled_circle(lx, ly, int(6 * s), (110, 240, 120))
+        draw_circle(lx, ly, int(6 * s), (85, 210, 110))
+
+
 def build_menu_surface():
     global draw_surface
     saved_surface = draw_surface
@@ -716,6 +747,9 @@ def build_menu_surface():
     draw_cloud(130, 170, scale=1.1)
     draw_cloud(500, 140, scale=0.95)
     draw_cloud(660, 260, scale=1.2)
+
+    # OVNI no canto inferior direito da abertura (requisito de uso de elipse).
+    draw_ufo_with_ellipses(680, 530, scale=0.95)
     
     # Desenha a casa no lado esquerdo, maior e mais perto do chao
     #draw_house(42, 290, scale=2.3)
