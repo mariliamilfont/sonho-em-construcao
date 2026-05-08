@@ -1064,6 +1064,8 @@ while True:
             sys.exit()
         if next_state is not None:
             game_state = next_state
+            if next_state == "game":
+                create_level()
 
     if game_state == "menu":
         draw_menu()
