@@ -69,23 +69,11 @@ pygame.display.set_caption("Sonhos em Construção")
 
 clock = pygame.time.Clock()
 
-# Surface alvo para rasterizacao por pixel.
 draw_surface = screen
 
-# ================== TRANSFORMAÇÃO DE COORDENADAS ==================
-# Transforma coordenadas de MUNDO para coordenadas de DISPOSITIVO (tela)
-# Fórmula: x_dispositivo = (x_mundo - offset_x) * zoom
-#          y_dispositivo = (y_mundo - offset_y) * zoom
-# 
-# offset_x, offset_y: translação (pan)
-# zoom: escala (zoom in/out)
-# 
-# VIEWPORT: define a área visível da tela onde os pixels são renderizados
-# VIEWPORT atual: [0, 0] a [WIDTH, HEIGHT]
-
-zoom = 1.0          # Escala/zoom (padrão 1.0 = sem zoom)
-offset_x = 0        # Translação X (mundo → dispositivo)
-offset_y = 0        # Translação Y (mundo → dispositivo)
+zoom = 1.0
+offset_x = 0
+offset_y = 0
 
 
 # ================== TEXTURA ==================
@@ -168,18 +156,6 @@ casa_w, casa_h = 320, 400
 casa_cache = cache_resize_cache_nearest(casa_src_cache, casa_src_w, casa_src_h, casa_w, casa_h)
 
 # ================== SET PIXEL (TRANSFORMAÇÃO DE COORDENADAS) ==================
-# Transforma ponto do sistema de COORDENADAS DO MUNDO para
-# COORDENADAS DE DISPOSITIVO (tela) e renderiza.
-#
-# Transformação aplicada:
-#   sx = (x - offset_x) * zoom
-#   sy = (y - offset_y) * zoom
-#
-# Onde:
-#   (x, y) = coordenadas no mundo (espaço lógico do jogo)
-#   (sx, sy) = coordenadas na tela (dispositivo)
-#   offset_x, offset_y = translação (pan)
-#   zoom = escala (zoom in/out)
 
 def rotate_point(x, y, cx, cy, angle):
     rad = math.radians(angle)
@@ -200,25 +176,10 @@ def set_pixel(x, y, color):
     feature_set_pixel(draw_surface, WIDTH, HEIGHT, offset_x, offset_y, zoom, x, y, color)
 
 # ================== RECORTE DE COHEN-SUTHERLAND ==================
-# Algoritmo de recorte de linha contra um retângulo (viewport).
-# Recorta segmentos de linha que saem dos limites da janela.
-# 
-# VIEWPORT para recorte: [0, 0] a [WIDTH, HEIGHT]
-# 
-# Uso: cohen_sutherland(x1, y1, x2, y2) retorna (x1', y1', x2', y2')
-#      ou None se a linha está completamente fora da viewport
-
 def cohen_sutherland(x1,y1,x2,y2):
     return feature_cohen_sutherland(x1, y1, x2, y2, WIDTH, HEIGHT)
 
 # ================== LINHA (COM RECORTE COHEN-SUTHERLAND) ==================
-# Desenha linha com recorte automático contra a viewport.
-# 
-# Algoritmo:
-#   1. Aplica Cohen-Sutherland para recortar linha contra viewport
-#   2. Se linha está completamente fora, descarta
-#   3. Caso contrário, desenha linha recortada com Bresenham
-
 def draw_line(x0, y0, x1, y1, color):
     feature_draw_line(x0, y0, x1, y1, color, set_pixel, cohen_sutherland)
 
@@ -572,7 +533,6 @@ def create_level():
         ]
         enemies = [
             {"x":225, "y":360, "r":15, "dir":1, "speed":1.5, "min_x":200, "max_x":300},
-            # {"x":610, "y":278, "r":16, "dir":-1, "speed":2.0, "min_x":550, "max_x":690}
         ]
 
     # Reseta cache da fase para garantir consistencia apos troca.
@@ -596,8 +556,6 @@ def render_static_platform_surface(p):
     global draw_surface
     saved_surface = draw_surface
 
-    # Sem alpha aqui para manter o topo visual alinhado ao topo de colisao,
-    # igual ao comportamento das plataformas desenhadas direto na tela.
     platform_surface = pygame.Surface(key)
     draw_surface = platform_surface
 
@@ -946,7 +904,6 @@ def move_player():
     keys = pygame.key.get_pressed()
     supporting_platform = None
 
-    # remember previous position for robust collision resolution
     prev_x, prev_y = player.x, player.y
 
     # Sprite da personagem e maior que a hitbox (30x30).
@@ -954,7 +911,6 @@ def move_player():
     sprite_x_offset = (garota_w - player.width) // 2
     sprite_head_offset = garota_h - player.height
 
-    # horizontal input
     if keys[pygame.K_LEFT]:
         player.x -= 5
     if keys[pygame.K_RIGHT]:
@@ -986,7 +942,6 @@ def move_player():
         if p["type"] == "goal":
             return "win"
 
-    # vertical physics
     vel_y += gravity
     player.y += vel_y
 
@@ -995,7 +950,6 @@ def move_player():
 
     on_ground = False
 
-    # check collisions against platforms (AABB), handle rotated separately
     for p in platforms:
         if p["type"] == "rotate":
             support_y = geom_check_rotated_platform_collision(p, player, math)
@@ -1023,22 +977,22 @@ def move_player():
                     continue
 
             if player.colliderect(rect):
-                # vertical resolution
+               
                 came_from_above = prev_y + player.height <= rect.top
                 came_from_below = prev_y >= rect.bottom
 
                 if came_from_above and vel_y >= 0:
-                    # falling onto platform
+               
                     player.bottom = rect.top
                     vel_y = 0
                     on_ground = True
                     supporting_platform = p
                 elif came_from_below and vel_y < 0:
-                    # hitting head on underside
+                    
                     player.top = rect.bottom + sprite_head_offset
                     vel_y = 0
                 else:
-                    # Safety fallback in case the player spawns inside a platform.
+            
                     if player.centerx < rect.centerx:
                         player.right = rect.left
                     else:
@@ -1047,13 +1001,10 @@ def move_player():
                 if p["type"] == "goal":
                     return "win"
 
-    # if standing on a moving platform, move with it
     if supporting_platform and supporting_platform.get("type") == "move":
         move_dx = supporting_platform.get("x", 0) - supporting_platform.get("_prev_x", supporting_platform.get("x", 0))
         player.x += move_dx
 
-        # Recheck side collisions after being carried by a moving platform.
-        # This prevents phase 2/3 platforms from being crossed horizontally.
         if move_dx != 0:
             for p in platforms:
                 if p is supporting_platform or p["type"] == "rotate":
@@ -1071,13 +1022,11 @@ def move_player():
                 if p["type"] == "goal":
                     return "win"
 
-    # enemy collisions
     player_rect = pygame.Rect(player.x, player.y, player.width, player.height)
     for enemy in enemies:
         if geom_rect_circle_collision(player_rect, int(enemy["x"]), int(enemy["y"]), enemy["r"]):
             return "dead"
 
-    # jump
     if keys[pygame.K_SPACE] and on_ground:
         vel_y = jump
 
