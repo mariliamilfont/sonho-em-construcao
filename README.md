@@ -160,6 +160,24 @@ flood_fill()
 projeto/
 │
 ├── main.py
+├── README.md
+│
+├── game/
+│   ├── main_game.py
+│   ├── engine/
+│       ├── image_cache.py
+│       ├── geometry.py
+│       └── bitmap_font.py
+│   └── funcionalidades/
+│       ├── pixel_viewport.py
+│       ├── clipping.py
+│       ├── rasterizacao.py
+│       ├── preenchimento.py
+│       ├── transformacoes.py
+│       ├── texturizacao.py
+│       ├── animacao.py
+│       ├── input_handler.py
+│       └── menus.py
 │
 ├── assets/
 │   ├── music/
@@ -175,8 +193,6 @@ projeto/
 │       ├── monstrodoce.png
 │       ├── garota.png
 │       └── casaluna.png
-│
-└── README.md
 ```
 
 ---

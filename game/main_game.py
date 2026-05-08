@@ -1,14 +1,64 @@
 import pygame
 import sys
 import math
+import os
 from collections import defaultdict
+
+# Permite executar tanto por `python main.py` quanto direto por `python game/main_game.py`.
+if __package__ is None or __package__ == "":
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from game.engine.image_cache import (
+    surface_to_cache as cache_surface_to_cache,
+    resize_cache_nearest as cache_resize_cache_nearest,
+)
+from game.engine.geometry import (
+    check_rotated_platform_collision as geom_check_rotated_platform_collision,
+    rect_circle_collision as geom_rect_circle_collision,
+)
+from game.engine.bitmap_font import (
+    draw_text_bitmap as font_draw_text_bitmap,
+    draw_text_bitmap_centered as font_draw_text_bitmap_centered,
+)
+from game.funcionalidades.pixel_viewport import set_pixel as feature_set_pixel
+from game.funcionalidades.clipping import cohen_sutherland as feature_cohen_sutherland
+from game.funcionalidades.rasterizacao import (
+    draw_line as feature_draw_line,
+    draw_circle as feature_draw_circle,
+    draw_ellipse as feature_draw_ellipse,
+    draw_filled_circle as feature_draw_filled_circle,
+)
+from game.funcionalidades.preenchimento import (
+    fill_polygon_scanline as feature_fill_polygon_scanline,
+    fill_polygon_gradient_scanline as feature_fill_polygon_gradient_scanline,
+    fill_polygon_texture_scanline as feature_fill_polygon_texture_scanline,
+    flood_fill as feature_flood_fill,
+)
+from game.funcionalidades.transformacoes import rotate_point as feature_rotate_point
+from game.funcionalidades.texturizacao import (
+    draw_textured_rect as feature_draw_textured_rect,
+    fill_textured_background as feature_fill_textured_background,
+)
+from game.funcionalidades.animacao import (
+    update_enemies as feature_update_enemies,
+    update_platforms as feature_update_platforms,
+)
+from game.funcionalidades.input_handler import (
+    apply_zoom_keys as feature_apply_zoom_keys,
+    handle_state_event as feature_handle_state_event,
+)
+from game.funcionalidades.menus import (
+    draw_menu as feature_draw_menu,
+    draw_win as feature_draw_win,
+    draw_dead as feature_draw_dead,
+)
 
 pygame.init()
 pygame.mixer.init()
 
 # ================== MUSICA ==================
 pygame.mixer.music.load("assets/music/musica.mp3")
-pygame.mixer.music.set_volume(0.5)  # volume de 0.0 até 1.0
+pygame.mixer.music.set_volume(0.2)  # volume de 0.0 até 1.0
 pygame.mixer.music.play(-1)  # -1 = loop infinito
 
 # ================== JANELA E VIEWPORT ==================
@@ -38,33 +88,12 @@ offset_x = 0        # Translação X (mundo → dispositivo)
 offset_y = 0        # Translação Y (mundo → dispositivo)
 
 
-def surface_to_cache(surface):
-    w, h = surface.get_width(), surface.get_height()
-    return [[surface.get_at((x, y)) for y in range(h)] for x in range(w)]
-
-
-def resize_cache_nearest(src_cache, src_w, src_h, dst_w, dst_h):
-    if src_w <= 0 or src_h <= 0:
-        return [[(255, 255, 255, 255) for _ in range(dst_h)] for _ in range(dst_w)]
-
-    dst_cache = [[None for _ in range(dst_h)] for _ in range(dst_w)]
-    for x in range(dst_w):
-        src_x = int(x * src_w / dst_w)
-        if src_x >= src_w:
-            src_x = src_w - 1
-        for y in range(dst_h):
-            src_y = int(y * src_h / dst_h)
-            if src_y >= src_h:
-                src_y = src_h - 1
-            dst_cache[x][y] = src_cache[src_x][src_y]
-    return dst_cache
-
 # ================== TEXTURA ==================
 texture = pygame.image.load("assets/images/plataforma.png")
 texture_src_w, texture_src_h = texture.get_width(), texture.get_height()
-texture_src_cache = surface_to_cache(texture)
+texture_src_cache = cache_surface_to_cache(texture)
 texture_w, texture_h = 50, 50
-texture_cache = resize_cache_nearest(
+texture_cache = cache_resize_cache_nearest(
     texture_src_cache,
     texture_src_w,
     texture_src_h,
@@ -74,9 +103,9 @@ texture_cache = resize_cache_nearest(
 
 texture2 = pygame.image.load("assets/images/plataforma2.png")
 texture2_src_w, texture2_src_h = texture2.get_width(), texture2.get_height()
-texture2_src_cache = surface_to_cache(texture2)
+texture2_src_cache = cache_surface_to_cache(texture2)
 texture2_w, texture2_h = 50, 50
-texture2_cache = resize_cache_nearest(
+texture2_cache = cache_resize_cache_nearest(
     texture2_src_cache,
     texture2_src_w,
     texture2_src_h,
@@ -86,9 +115,9 @@ texture2_cache = resize_cache_nearest(
 
 texture3 = pygame.image.load("assets/images/plataforma3.png")
 texture3_src_w, texture3_src_h = texture3.get_width(), texture3.get_height()
-texture3_src_cache = surface_to_cache(texture3)
+texture3_src_cache = cache_surface_to_cache(texture3)
 texture3_w, texture3_h = 60, 60
-texture3_cache = resize_cache_nearest(
+texture3_cache = cache_resize_cache_nearest(
     texture3_src_cache,
     texture3_src_w,
     texture3_src_h,
@@ -103,75 +132,40 @@ current_platform_texture_h = texture_h
 # ================== TEXTURA FUNDO ESPACO (FASE 2) ==================
 space_bg_texture = pygame.image.load("assets/images/fundoespaco.png")
 space_bg_w, space_bg_h = space_bg_texture.get_width(), space_bg_texture.get_height()
-space_bg_cache = surface_to_cache(space_bg_texture)
+space_bg_cache = cache_surface_to_cache(space_bg_texture)
 
 # ================== TEXTURA FUNDO DOCE (FASE 3) ==================
 sweet_bg_texture = pygame.image.load("assets/images/fundodoce.png")
 sweet_bg_w, sweet_bg_h = sweet_bg_texture.get_width(), sweet_bg_texture.get_height()
-sweet_bg_cache = surface_to_cache(sweet_bg_texture)
+sweet_bg_cache = cache_surface_to_cache(sweet_bg_texture)
 
 # ================== TEXTURA ALIEN (FASE 2) ==================
 alien_texture = pygame.image.load("assets/images/alien.png")
 alien_src_w, alien_src_h = alien_texture.get_width(), alien_texture.get_height()
-alien_src_cache = surface_to_cache(alien_texture)
+alien_src_cache = cache_surface_to_cache(alien_texture)
 alien_w, alien_h = 70, 70 
-alien_cache = resize_cache_nearest(alien_src_cache, alien_src_w, alien_src_h, alien_w, alien_h)
+alien_cache = cache_resize_cache_nearest(alien_src_cache, alien_src_w, alien_src_h, alien_w, alien_h)
 
 # ================== TEXTURA MONSTRODOCE (FASE 3) ==================
 monstrodoce_texture = pygame.image.load("assets/images/monstrodoce.png")
 monstrodoce_src_w, monstrodoce_src_h = monstrodoce_texture.get_width(), monstrodoce_texture.get_height()
-monstrodoce_src_cache = surface_to_cache(monstrodoce_texture)
+monstrodoce_src_cache = cache_surface_to_cache(monstrodoce_texture)
 monstrodoce_w, monstrodoce_h = 70, 70 
-monstrodoce_cache = resize_cache_nearest(monstrodoce_src_cache, monstrodoce_src_w, monstrodoce_src_h, monstrodoce_w, monstrodoce_h)
+monstrodoce_cache = cache_resize_cache_nearest(monstrodoce_src_cache, monstrodoce_src_w, monstrodoce_src_h, monstrodoce_w, monstrodoce_h)
 
 # ================== TEXTURA PERSONAGEM ==================
 garota_texture = pygame.image.load("assets/images/garota.png")
 garota_src_w, garota_src_h = garota_texture.get_width(), garota_texture.get_height()
-garota_src_cache = surface_to_cache(garota_texture)
+garota_src_cache = cache_surface_to_cache(garota_texture)
 garota_w, garota_h = 40, 60
-garota_cache = resize_cache_nearest(garota_src_cache, garota_src_w, garota_src_h, garota_w, garota_h)
+garota_cache = cache_resize_cache_nearest(garota_src_cache, garota_src_w, garota_src_h, garota_w, garota_h)
 
 # ================== TEXTURA CASA ==================
 casa_texture = pygame.image.load("assets/images/casaluna.png")
 casa_src_w, casa_src_h = casa_texture.get_width(), casa_texture.get_height()
-casa_src_cache = surface_to_cache(casa_texture)
+casa_src_cache = cache_surface_to_cache(casa_texture)
 casa_w, casa_h = 320, 400
-casa_cache = resize_cache_nearest(casa_src_cache, casa_src_w, casa_src_h, casa_w, casa_h)
-
-# ================== FONTE BITMAP ==================
-BITMAP_FONT = {
-    "A": ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
-    "B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
-    "C": ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
-    "D": ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
-    "E": ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
-    "F": ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
-    "H": ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
-    "G": ["01110", "10001", "10000", "10111", "10001", "10001", "01110"],
-    "I": ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
-    "J": ["00100", "00100", "00100", "00100", "10100", "10100", "01110"],
-    "L": ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
-    "M": ["10001", "11011", "10101", "10001", "10001", "10001", "10001"],
-    "N": ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
-    "O": ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
-    "P": ["11110", "10001", "10001", "11110", "10000", "10000", "10000"],
-    "R": ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
-    "S": ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
-    "T": ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
-    "U": ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
-    "V": ["10001", "10001", "10001", "10001", "10001", "01010", "00100"],
-    "Z": ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
-    "Ç": ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
-    "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
-    "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
-    "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
-    "3": ["11110", "00001", "00001", "01110", "00001", "00001", "11110"],
-    "Ã": ["01110", "10001", "10001", "10111", "10001", "10001", "10001"],
-    "!": ["00100", "00100", "00100", "00100", "00100", "00000", "00100"],
-    " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
-    ",": ["00000", "00000", "00000", "00000", "00100", "00100", "01000"],
-    
-}
+casa_cache = cache_resize_cache_nearest(casa_src_cache, casa_src_w, casa_src_h, casa_w, casa_h)
 
 # ================== SET PIXEL (TRANSFORMAÇÃO DE COORDENADAS) ==================
 # Transforma ponto do sistema de COORDENADAS DO MUNDO para
@@ -189,14 +183,7 @@ BITMAP_FONT = {
 
 def set_pixel(x, y, color):
     global draw_surface
-
-    # Aplica transformação de coordenadas: mundo → dispositivo
-    sx = int((x - offset_x) * zoom)
-    sy = int((y - offset_y) * zoom)
-
-    # Verifica se pixel está dentro da VIEWPORT (tela)
-    if 0 <= sx < WIDTH and 0 <= sy < HEIGHT:
-        draw_surface.set_at((sx, sy), color)
+    feature_set_pixel(draw_surface, WIDTH, HEIGHT, offset_x, offset_y, zoom, x, y, color)
 
 # ================== RECORTE DE COHEN-SUTHERLAND ==================
 # Algoritmo de recorte de linha contra um retângulo (viewport).
@@ -207,54 +194,8 @@ def set_pixel(x, y, color):
 # Uso: cohen_sutherland(x1, y1, x2, y2) retorna (x1', y1', x2', y2')
 #      ou None se a linha está completamente fora da viewport
 
-INSIDE, LEFT, RIGHT, BOTTOM, TOP = 0,1,2,4,8
-
-def compute_code(x,y):
-    """Computa o código de região para ponto (x, y) contra viewport."""
-    code = INSIDE
-    if x < 0: code |= LEFT
-    elif x > WIDTH: code |= RIGHT
-    if y < 0: code |= TOP
-    elif y > HEIGHT: code |= BOTTOM
-    return code
-
 def cohen_sutherland(x1,y1,x2,y2):
-    """Recorta linha (x1,y1)-(x2,y2) contra viewport [0,0]-[WIDTH,HEIGHT]."""
-    code1 = compute_code(x1,y1)
-    code2 = compute_code(x2,y2)
-
-    while True:
-        # Ambos dentro da viewport
-        if code1 == 0 and code2 == 0:
-            return x1,y1,x2,y2
-        # Ambos fora do mesmo lado
-        if code1 & code2:
-            return None
-
-        # Um ponto está fora
-        code_out = code1 if code1 else code2
-
-        # Calcula interseção com borda da viewport
-        if code_out & TOP:
-            x = x1 + (x2-x1)*(0-y1)/(y2-y1) if y2 != y1 else x1
-            y = 0
-        elif code_out & BOTTOM:
-            x = x1 + (x2-x1)*(HEIGHT-y1)/(y2-y1) if y2 != y1 else x1
-            y = HEIGHT
-        elif code_out & RIGHT:
-            y = y1 + (y2-y1)*(WIDTH-x1)/(x2-x1) if x2 != x1 else y1
-            x = WIDTH
-        elif code_out & LEFT:
-            y = y1 + (y2-y1)*(0-x1)/(x2-x1) if x2 != x1 else y1
-            x = 0
-
-        # Atualiza ponto recortado
-        if code_out == code1:
-            x1,y1 = x,y
-            code1 = compute_code(x1,y1)
-        else:
-            x2,y2 = x,y
-            code2 = compute_code(x2,y2)
+    return feature_cohen_sutherland(x1, y1, x2, y2, WIDTH, HEIGHT)
 
 # ================== LINHA (COM RECORTE COHEN-SUTHERLAND) ==================
 # Desenha linha com recorte automático contra a viewport.
@@ -265,177 +206,28 @@ def cohen_sutherland(x1,y1,x2,y2):
 #   3. Caso contrário, desenha linha recortada com Bresenham
 
 def draw_line(x0, y0, x1, y1, color):
-    """Desenha linha de (x0,y0) até (x1,y1) com recorte Cohen-Sutherland."""
-    # Aplica recorte de Cohen-Sutherland
-    clipped = cohen_sutherland(x0,y0,x1,y1)
-    if clipped is None:
-        return  # Linha completamente fora da viewport
-
-    x0,y0,x1,y1 = clipped
-    x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
-
-    dx = abs(x1 - x0)
-    dy = abs(y1 - y0)
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
-    err = dx - dy
-    draw_px = set_pixel
-
-    while True:
-        draw_px(x0, y0, color)
-        if x0 == x1 and y0 == y1:
-            break
-        e2 = 2 * err
-        if e2 > -dy:
-            err -= dy
-            x0 += sx
-        if e2 < dx:
-            err += dx
-            y0 += sy
+    feature_draw_line(x0, y0, x1, y1, color, set_pixel, cohen_sutherland)
 
 
 def fill_polygon_scanline(vertices, color):
-    if len(vertices) < 3:
-        return
-
-    min_y = max(0, math.ceil(min(v[1] for v in vertices)))
-    max_y = min(HEIGHT - 1, math.floor(max(v[1] for v in vertices)))
-    draw_px = set_pixel
-
-    for y in range(min_y, max_y + 1):
-        intersections = []
-        for i in range(len(vertices)):
-            x1, y1 = vertices[i]
-            x2, y2 = vertices[(i + 1) % len(vertices)]
-
-            if y1 == y2:
-                continue
-
-            if min(y1, y2) <= y < max(y1, y2):
-                t = (y - y1) / (y2 - y1)
-                x = x1 + t * (x2 - x1)
-                intersections.append(x)
-
-        intersections.sort()
-        for i in range(0, len(intersections) - 1, 2):
-            x_start = max(0, math.ceil(intersections[i]))
-            x_end = min(WIDTH - 1, math.floor(intersections[i + 1]))
-            for x in range(x_start, x_end + 1):
-                draw_px(x, y, color)
+    feature_fill_polygon_scanline(vertices, color, WIDTH, HEIGHT, set_pixel)
 
 
 def fill_polygon_gradient_scanline(vertices, colors):
-    if len(vertices) < 3 or len(vertices) != len(colors):
-        return
-
-    min_y = max(0, math.ceil(min(v[1] for v in vertices)))
-    max_y = min(HEIGHT - 1, math.floor(max(v[1] for v in vertices)))
-    draw_px = set_pixel
-
-    for y in range(min_y, max_y + 1):
-        intersections = []
-        for i in range(len(vertices)):
-            x1, y1 = vertices[i]
-            x2, y2 = vertices[(i + 1) % len(vertices)]
-            c1 = colors[i]
-            c2 = colors[(i + 1) % len(vertices)]
-
-            if y1 == y2:
-                continue
-
-            if min(y1, y2) <= y < max(y1, y2):
-                t = (y - y1) / (y2 - y1)
-                x = x1 + t * (x2 - x1)
-                r = c1[0] + t * (c2[0] - c1[0])
-                g = c1[1] + t * (c2[1] - c1[1])
-                b = c1[2] + t * (c2[2] - c1[2])
-                intersections.append((x, r, g, b))
-
-        intersections.sort(key=lambda item: item[0])
-        for i in range(0, len(intersections) - 1, 2):
-            x1, r1, g1, b1 = intersections[i]
-            x2, r2, g2, b2 = intersections[i + 1]
-
-            xs = max(0, math.ceil(x1))
-            xe = min(WIDTH - 1, math.floor(x2))
-            span = x2 - x1
-
-            for x in range(xs, xe + 1):
-                t = 0 if span == 0 else (x - x1) / span
-                r = int(r1 + t * (r2 - r1))
-                g = int(g1 + t * (g2 - g1))
-                b = int(b1 + t * (b2 - b1))
-                draw_px(x, y, (r, g, b))
+    feature_fill_polygon_gradient_scanline(vertices, colors, WIDTH, HEIGHT, set_pixel)
 
 
 def fill_polygon_texture_scanline(vertices, tex_coords):
-    if len(vertices) < 3 or len(vertices) != len(tex_coords):
-        return
-
-    min_y = max(0, math.ceil(min(v[1] for v in vertices)))
-    max_y = min(HEIGHT - 1, math.floor(max(v[1] for v in vertices)))
-    draw_px = set_pixel
-
-    for y in range(min_y, max_y + 1):
-        intersections = []
-        for i in range(len(vertices)):
-            x1, y1 = vertices[i]
-            x2, y2 = vertices[(i + 1) % len(vertices)]
-            u1, v1 = tex_coords[i]
-            u2, v2 = tex_coords[(i + 1) % len(vertices)]
-
-            if y1 == y2:
-                continue
-
-            if min(y1, y2) <= y < max(y1, y2):
-                t = (y - y1) / (y2 - y1)
-                x = x1 + t * (x2 - x1)
-                u = u1 + t * (u2 - u1)
-                v = v1 + t * (v2 - v1)
-                intersections.append((x, u, v))
-
-        intersections.sort(key=lambda item: item[0])
-        for i in range(0, len(intersections) - 1, 2):
-            x1, u1, v1 = intersections[i]
-            x2, u2, v2 = intersections[i + 1]
-
-            xs = max(0, math.ceil(x1))
-            xe = min(WIDTH - 1, math.floor(x2))
-            span = x2 - x1
-
-            for x in range(xs, xe + 1):
-                t = 0 if span == 0 else (x - x1) / span
-                u = int(u1 + t * (u2 - u1)) % current_platform_texture_w
-                v = int(v1 + t * (v2 - v1)) % current_platform_texture_h
-                draw_px(x, y, current_platform_texture_cache[u][v])
-
-
-def draw_text_bitmap(x, y, text, color, scale=2):
-    cursor_x = x
-    draw_px = set_pixel
-
-    for ch in text.upper():
-        glyph = BITMAP_FONT.get(ch, BITMAP_FONT[" "])
-        for gy, row in enumerate(glyph):
-            for gx, bit in enumerate(row):
-                if bit == "1":
-                    for sy in range(scale):
-                        for sx in range(scale):
-                            draw_px(cursor_x + gx * scale + sx, y + gy * scale + sy, color)
-        cursor_x += (5 * scale) + scale
-
-
-def bitmap_text_width(text, scale=2):
-    if not text:
-        return 0
-    # Cada glifo tem 5 colunas + 1 coluna de espacamento.
-    return (len(text) * (5 * scale + scale)) - scale
-
-
-def draw_text_bitmap_centered(y, text, color, scale=2):
-    text_w = bitmap_text_width(text, scale)
-    x = (WIDTH - text_w) // 2
-    draw_text_bitmap(x, y, text, color, scale)
+    feature_fill_polygon_texture_scanline(
+        vertices,
+        tex_coords,
+        WIDTH,
+        HEIGHT,
+        set_pixel,
+        current_platform_texture_cache,
+        current_platform_texture_w,
+        current_platform_texture_h,
+    )
 
 
 def draw_rect_outline(x, y, w, h, color):
@@ -456,30 +248,7 @@ def draw_rect(x, y, w, h, color):
 
 # ================== TEXTURA ==================
 def draw_textured_rect(x,y,w,h):
-    vertices = [
-        (x, y),
-        (x + w, y),
-        (x + w, y + h),
-        (x, y + h),
-    ]
-    tex_coords = [
-        (0, 0),
-        (w, 0),
-        (w, h),
-        (0, h),
-    ]
-    fill_polygon_texture_scanline(vertices, tex_coords)
-
-# ================== ROTAÇÃO ==================
-def rotate_point(px, py, cx, cy, angle):
-    rad = math.radians(angle)
-    x = px - cx
-    y = py - cy
-
-    xr = x * math.cos(rad) - y * math.sin(rad)
-    yr = x * math.sin(rad) + y * math.cos(rad)
-
-    return xr + cx, yr + cy
+    feature_draw_textured_rect(x, y, w, h, fill_polygon_texture_scanline)
 
 def draw_rotated_rect(p):
     cx = p["x"] + p["w"]/2
@@ -492,112 +261,24 @@ def draw_rotated_rect(p):
         (p["x"], p["y"]+p["h"])
     ]
 
-    rotated = [rotate_point(x,y,cx,cy,p["angle"]) for x,y in corners]
+    rotated = [feature_rotate_point(x, y, cx, cy, p["angle"], math) for x, y in corners]
 
     for i in range(4):
         x1,y1 = rotated[i]
         x2,y2 = rotated[(i+1)%4]
         draw_line(int(x1),int(y1),int(x2),int(y2),(255,200,100))
 
-
-def point_in_polygon(x, y, vertices):
-    n = len(vertices)
-    inside = False
-
-    p1x, p1y = vertices[0]
-    for i in range(1, n + 1):
-        p2x, p2y = vertices[i % n]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xinters:
-                        inside = not inside
-        p1x, p1y = p2x, p2y
-
-    return inside
-
-
-def get_polygon_support_y(x, vertices):
-    max_y = -float("inf")
-    n = len(vertices)
-
-    for i in range(n):
-        x1, y1 = vertices[i]
-        x2, y2 = vertices[(i + 1) % n]
-
-        if min(x1, x2) <= x <= max(x1, x2) and x1 != x2:
-            t = (x - x1) / (x2 - x1)
-            y = y1 + t * (y2 - y1)
-            max_y = max(max_y, y)
-        elif x1 == x2 and abs(x - x1) < 1:
-            max_y = max(max_y, y1, y2)
-
-    return max_y if max_y != -float("inf") else None
-
-
-def check_rotated_platform_collision(p, player_rect):
-    if p["type"] != "rotate":
-        return None
-
-    cx = p["x"] + p["w"] / 2
-    cy = p["y"] + p["h"] / 2
-
-    corners = [
-        (p["x"], p["y"]),
-        (p["x"] + p["w"], p["y"]),
-        (p["x"] + p["w"], p["y"] + p["h"]),
-        (p["x"], p["y"] + p["h"]),
-    ]
-
-    rotated = [rotate_point(x, y, cx, cy, p["angle"]) for x, y in corners]
-
-    player_bottom_x = player_rect.centerx
-    player_bottom_y = player_rect.bottom
-
-    if point_in_polygon(player_bottom_x, player_bottom_y, rotated):
-        support_y = get_polygon_support_y(player_bottom_x, rotated)
-        if support_y is not None:
-            return support_y
-
-    return None
-
 # ================== CÍRCULO ==================
 def draw_circle(cx, cy, r, color):
-    x = 0
-    y = r
-    d = 1 - r
-
-    while x <= y:
-        points = [
-            (cx+x, cy+y), (cx-x, cy+y),
-            (cx+x, cy-y), (cx-x, cy-y),
-            (cx+y, cy+x), (cx-y, cy+x),
-            (cx+y, cy-x), (cx-y, cy-x)
-        ]
-        for px, py in points:
-            set_pixel(px, py, color)
-
-        if d < 0:
-            d += 2*x + 3
-        else:
-            d += 2*(x - y) + 5
-            y -= 1
-        x += 1
+    feature_draw_circle(cx, cy, r, color, set_pixel)
 
 # ================== ELIPSE ==================
 def draw_ellipse(cx, cy, rx, ry, color):
-    for x in range(-rx, rx):
-        y = int((1 - (x*x)/(rx*rx))**0.5 * ry)
-        set_pixel(cx + x, cy + y, color)
-        set_pixel(cx + x, cy - y, color)
+    feature_draw_ellipse(cx, cy, rx, ry, color, set_pixel)
 
 
 def draw_filled_circle(cx, cy, r, color):
-    for dy in range(-r, r + 1):
-        dx = int((r * r - dy * dy) ** 0.5)
-        draw_line(cx - dx, cy + dy, cx + dx, cy + dy, color)
+    feature_draw_filled_circle(cx, cy, r, color, draw_line)
 
 
 def fill_textured_circle(cx, cy, r):
@@ -727,13 +408,7 @@ def build_level1_background_surface():
 
 
 def fill_textured_background(tex_cache, tex_w, tex_h):
-    """Preenche o fundo inteiro com textura em modo tiling."""
-    draw_px = set_pixel
-    for y in range(HEIGHT):
-        for x in range(WIDTH):
-            tx = x % tex_w
-            ty = y % tex_h
-            draw_px(x, y, tex_cache[tx][ty])
+    feature_fill_textured_background(WIDTH, HEIGHT, tex_cache, tex_w, tex_h, set_pixel)
 
 
 def build_level2_background_surface():
@@ -762,20 +437,8 @@ def build_level3_background_surface():
     return level_surface
 
 
-def rect_circle_collision(rect, cx, cy, r):
-    nearest_x = max(rect.left, min(cx, rect.right))
-    nearest_y = max(rect.top, min(cy, rect.bottom))
-    dx = cx - nearest_x
-    dy = cy - nearest_y
-    return dx * dx + dy * dy <= r * r
-
-
 def update_enemies():
-    for enemy in enemies:
-        enemy["x"] += enemy["dir"] * enemy["speed"]
-        if enemy["x"] <= enemy["min_x"] or enemy["x"] >= enemy["max_x"]:
-            enemy["dir"] *= -1
-            enemy["x"] = max(enemy["min_x"], min(enemy["x"], enemy["max_x"]))
+    feature_update_enemies(enemies)
 
 
 def draw_enemies():
@@ -817,32 +480,7 @@ def draw_enemies():
 
 # ================== FLOOD FILL ==================
 def flood_fill(x, y, target_color, new_color):
-    if target_color == new_color:
-        return
-
-    stack = [(x, y)]
-    visited = set()
-
-    while stack:
-        px, py = stack.pop()
-        key = (px, py)
-
-        if key in visited:
-            continue
-        visited.add(key)
-
-        if px < 0 or px >= WIDTH or py < 0 or py >= HEIGHT:
-            continue
-
-        if draw_surface.get_at((px, py))[:3] != target_color:
-            continue
-
-        set_pixel(px, py, new_color)
-
-        stack.append((px+1, py))
-        stack.append((px-1, py))
-        stack.append((px, py+1))
-        stack.append((px, py-1))
+    feature_flood_fill(x, y, target_color, new_color, WIDTH, HEIGHT, draw_surface, set_pixel)
 
 # ================== PLAYER ==================
 player = pygame.Rect(100, 400, 30, 30)
@@ -1095,7 +733,7 @@ def build_menu_surface():
     
 
     # Texto do menu - Titulo (maior e mais distante das nuvens)
-    draw_text_bitmap_centered(40, "SONHOS EM CONSTRUÇÃO", (255, 255, 200), scale=4)
+    font_draw_text_bitmap_centered(40, "SONHOS EM CONSTRUÇÃO", (255, 255, 200), WIDTH, set_pixel, scale=4)
     
     # Texto da historia
     history_lines = [
@@ -1108,14 +746,14 @@ def build_menu_surface():
     
     y_pos = 200
     for line in history_lines:
-        draw_text_bitmap(250, y_pos, line, (200, 220, 255), scale=1)
+        font_draw_text_bitmap(250, y_pos, line, (200, 220, 255), set_pixel, scale=1)
         y_pos += 35
     
     # Botao e instrucoes (mais perto do chao)
     draw_rect_outline(230, 480, 340, 50, (150, 180, 225))
-    draw_text_bitmap_centered(505, "PRESSIONE ENTER PARA COMECAR", (200, 220, 255), scale=1)
+    font_draw_text_bitmap_centered(505, "PRESSIONE ENTER PARA COMECAR", (200, 220, 255), WIDTH, set_pixel, scale=1)
     
-    draw_text_bitmap_centered(545, "APERTE ESC PARA SAIR", (180, 190, 220), scale=1)
+    font_draw_text_bitmap_centered(545, "APERTE ESC PARA SAIR", (180, 190, 220), WIDTH, set_pixel, scale=1)
 
     draw_surface = saved_surface
     return menu_surface
@@ -1136,9 +774,9 @@ def build_win_surface():
     draw_stars(120)
 
     draw_rect_outline(120, 180, 560, 220, (120, 150, 220))
-    draw_text_bitmap_centered(235, "SONHO COMPLETO!", (255, 255, 255), scale=3)
-    draw_text_bitmap_centered(300, "APERTE R PARA REINICIAR", (200, 220, 255), scale=2)
-    draw_text_bitmap_centered(335, "APERTE ESC PARA SAIR", (200, 220, 255), scale=2)
+    font_draw_text_bitmap_centered(235, "SONHO COMPLETO!", (255, 255, 255), WIDTH, set_pixel, scale=3)
+    font_draw_text_bitmap_centered(300, "APERTE R PARA REINICIAR", (200, 220, 255), WIDTH, set_pixel, scale=2)
+    font_draw_text_bitmap_centered(335, "APERTE ESC PARA SAIR", (200, 220, 255), WIDTH, set_pixel, scale=2)
 
     draw_surface = saved_surface
     return win_surface
@@ -1158,9 +796,9 @@ def build_dead_surface():
     draw_stars(120)
 
     draw_rect_outline(120, 180, 560, 220, (220, 120, 120))
-    draw_text_bitmap_centered(235, "VOCE CAIU!", (255, 210, 210), scale=3)
-    draw_text_bitmap_centered(300, "APERTE R PARA REINICIAR", (240, 240, 255), scale=2)
-    draw_text_bitmap_centered(335, "APERTE ESC PARA SAIR", (240, 240, 255), scale=2)
+    font_draw_text_bitmap_centered(235, "VOCE CAIU!", (255, 210, 210), WIDTH, set_pixel, scale=3)
+    font_draw_text_bitmap_centered(300, "APERTE R PARA REINICIAR", (240, 240, 255), WIDTH, set_pixel, scale=2)
+    font_draw_text_bitmap_centered(335, "APERTE ESC PARA SAIR", (240, 240, 255), WIDTH, set_pixel, scale=2)
 
     draw_surface = saved_surface
     return dead_surface
@@ -1170,32 +808,11 @@ dead_surface = build_dead_surface()
 
 # ================== MENU ==================
 def draw_menu():
-    screen.blit(menu_surface, (0, 0))
+    feature_draw_menu(screen, menu_surface)
 
 # ================== UPDATE ==================
 def update_platforms():
-    for p in platforms:
-        if p["type"] == "move":
-            p["_prev_x"] = p["x"]
-            p["x"] += p.get("speed", 2) * p["dir"]
-            if p["x"] > p.get("max_x", p["x"]) or p["x"] < p.get("min_x", p["x"]):
-                p["dir"] *= -1
-                p["x"] = max(p.get("min_x", p["x"]), min(p["x"], p.get("max_x", p["x"])))
-
-        elif p["type"] == "scale":
-            if p["growing"]:
-                p["scale"] += 0.01
-                if p["scale"] >= 1.5:
-                    p["growing"] = False
-            else:
-                p["scale"] -= 0.01
-                if p["scale"] <= 0.5:
-                    p["growing"] = True
-
-            p["w"] = 100 * p["scale"]
-
-        elif p["type"] == "rotate":
-            p["angle"] += 1
+    feature_update_platforms(platforms)
 
 # ================== DRAW ==================
 def draw_platforms():
@@ -1300,7 +917,7 @@ def move_player():
     # check collisions against platforms (AABB), handle rotated separately
     for p in platforms:
         if p["type"] == "rotate":
-            support_y = check_rotated_platform_collision(p, player)
+            support_y = geom_check_rotated_platform_collision(p, player, math)
             if support_y is not None and vel_y >= 0:
                 player.bottom = int(support_y)
                 vel_y = 0
@@ -1376,7 +993,7 @@ def move_player():
     # enemy collisions
     player_rect = pygame.Rect(player.x, player.y, player.width, player.height)
     for enemy in enemies:
-        if rect_circle_collision(player_rect, int(enemy["x"]), int(enemy["y"]), enemy["r"]):
+        if geom_rect_circle_collision(player_rect, int(enemy["x"]), int(enemy["y"]), enemy["r"]):
             return "dead"
 
     # jump
@@ -1387,49 +1004,32 @@ def move_player():
 
 # ================== WIN ==================
 def draw_win():
-    screen.blit(win_surface, (0, 0))
+    feature_draw_win(screen, win_surface)
 
 
 def draw_dead():
-    screen.blit(dead_surface, (0, 0))
+    feature_draw_dead(screen, dead_surface)
 
 # ================== LOOP ==================
 while True:
     clock.tick(60)
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_q]: zoom += 0.01
-    if keys[pygame.K_e]: zoom -= 0.01
+    zoom = feature_apply_zoom_keys(keys, zoom, pygame)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
 
-        if game_state == "menu" and event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            game_state = "game"
-
-        elif game_state == "menu" and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+        _, level, vel_y, should_quit, next_state = feature_handle_state_event(
+            event, game_state, level, player, vel_y, create_level, pygame
+        )
+        if should_quit:
             pygame.quit()
             sys.exit()
-
-        elif game_state == "win" and event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-            level = 1
-            player.x, player.y = 100, 400
-            vel_y = 0
-            create_level()
-            game_state = "game"
-
-        elif game_state == "dead" and event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-            level = 1
-            player.x, player.y = 100, 400
-            vel_y = 0
-            create_level()
-            game_state = "game"
-
-        elif game_state in ("win", "dead") and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            pygame.quit()
-            sys.exit()
+        if next_state is not None:
+            game_state = next_state
 
     if game_state == "menu":
         draw_menu()
