@@ -125,13 +125,25 @@ garota_src_cache = surface_to_cache(garota_texture)
 garota_w, garota_h = 40, 60
 garota_cache = resize_cache_nearest(garota_src_cache, garota_src_w, garota_src_h, garota_w, garota_h)
 
+# ================== TEXTURA CASA ==================
+casa_texture = pygame.image.load("assets/images/casaluna.png")
+casa_src_w, casa_src_h = casa_texture.get_width(), casa_texture.get_height()
+casa_src_cache = surface_to_cache(casa_texture)
+casa_w, casa_h = 320, 400
+casa_cache = resize_cache_nearest(casa_src_cache, casa_src_w, casa_src_h, casa_w, casa_h)
+
 # ================== FONTE BITMAP ==================
 BITMAP_FONT = {
     "A": ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+    "B": ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
     "C": ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
+    "D": ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
     "E": ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
+    "F": ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
     "H": ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
+    "G": ["01110", "10001", "10000", "10111", "10001", "10001", "01110"],
     "I": ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
+    "J": ["00100", "00100", "00100", "00100", "10100", "10100", "01110"],
     "L": ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
     "M": ["10001", "11011", "10101", "10001", "10001", "10001", "10001"],
     "N": ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
@@ -142,12 +154,17 @@ BITMAP_FONT = {
     "T": ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
     "U": ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
     "V": ["10001", "10001", "10001", "10001", "10001", "01010", "00100"],
+    "Z": ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
+    "Ç": ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
     "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
     "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
     "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
     "3": ["11110", "00001", "00001", "01110", "00001", "00001", "11110"],
+    "Ã": ["01110", "10001", "10001", "10111", "10001", "10001", "10001"],
     "!": ["00100", "00100", "00100", "00100", "00100", "00000", "00100"],
     " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
+    ",": ["00000", "00000", "00000", "00000", "00100", "00100", "01000"],
+    
 }
 
 # ================== SET PIXEL (TRANSFORMAÇÃO DE COORDENADAS) ==================
@@ -951,6 +968,90 @@ level2_background_surface = build_level2_background_surface()
 level3_background_surface = build_level3_background_surface()
 
 
+def draw_stars(count=100):
+    """Desenha estrelas espalhadas no céu noturno."""
+    import random
+    random.seed(42)  # Para sempre gerar as mesmas estrelas
+    for _ in range(count):
+        x = random.randint(0, WIDTH)
+        y = random.randint(0, int(HEIGHT * 0.6))
+        size = random.randint(1, 3)
+        brightness = random.randint(180, 255)
+        set_pixel(x, y, (brightness, brightness, brightness))
+        # Adiciona pequeno brilho ao redor da estrela
+        if size > 1:
+            for dx in [-1, 1]:
+                if 0 <= x + dx < WIDTH:
+                    set_pixel(x + dx, y, (brightness // 2, brightness // 2, brightness // 2))
+            for dy in [-1, 1]:
+                if 0 <= y + dy < int(HEIGHT * 0.6):
+                    set_pixel(x, y + dy, (brightness // 2, brightness // 2, brightness // 2))
+
+
+def draw_moon(cx, cy, radius):
+    """Desenha uma lua cheia com cor uniforme."""
+    # Desenha círculo principal da lua em cor amarelada uniforme
+    draw_filled_circle(cx, cy, radius, (255, 250, 200))
+
+
+def draw_night_sky():
+    """Desenha um céu noturno com gradiente."""
+    # Céu com gradiente de azul escuro para mais escuro
+    for y in range(HEIGHT):
+        # Gradiente: mais azul no topo, mais escuro embaixo
+        ratio = y / HEIGHT
+        r = int(10 + 30 * ratio)
+        g = int(15 + 35 * ratio)
+        b = int(40 + 50 * ratio)
+        for x in range(WIDTH):
+            set_pixel(x, y, (r, g, b))
+
+
+def draw_house(x, y, scale=1.0):
+    """Desenha uma casa pixelada no estilo retrocom escala ajustavel."""
+    s = scale
+    # Parede principal (amarelo)
+    fill_polygon_scanline(
+        [(x, y + int(40*s)), (x + int(60*s), y + int(40*s)), (x + int(60*s), y + int(80*s)), (x, y + int(80*s))],
+        (220, 180, 80)
+    )
+    
+    # Telhado (triangulo vermelho)
+    fill_polygon_scanline(
+        [(x - int(5*s), y + int(40*s)), (x + int(65*s), y + int(40*s)), (x + int(30*s), y + int(10*s))],
+        (200, 60, 60)
+    )
+    
+    # Porta (retangulo marrom)
+    fill_polygon_scanline(
+        [(x + int(20*s), y + int(60*s)), (x + int(40*s), y + int(60*s)), (x + int(40*s), y + int(80*s)), (x + int(20*s), y + int(80*s))],
+        (100, 60, 30)
+    )
+    
+    # Maaneta (pequeno circulo)
+    draw_filled_circle(x + int(38*s), y + int(70*s), int(2*s), (200, 180, 100))
+    
+    # Janela 1 (esquerda)
+    fill_polygon_scanline(
+        [(x + int(8*s), y + int(48*s)), (x + int(18*s), y + int(48*s)), (x + int(18*s), y + int(58*s)), (x + int(8*s), y + int(58*s))],
+        (150, 200, 255)
+    )
+    draw_rect_outline(x + int(8*s), y + int(48*s), int(10*s), int(10*s), (80, 120, 180))
+    
+    # Janela 2 (direita)
+    fill_polygon_scanline(
+        [(x + int(42*s), y + int(48*s)), (x + int(52*s), y + int(48*s)), (x + int(52*s), y + int(58*s)), (x + int(42*s), y + int(58*s))],
+        (150, 200, 255)
+    )
+    draw_rect_outline(x + int(42*s), y + int(48*s), int(10*s), int(10*s), (80, 120, 180))
+    
+    # Chimene (retangulo marrom escuro)
+    fill_polygon_scanline(
+        [(x + int(50*s), y + int(15*s)), (x + int(58*s), y + int(15*s)), (x + int(58*s), y + int(40*s)), (x + int(50*s), y + int(40*s))],
+        (80, 40, 20)
+    )
+
+
 def build_menu_surface():
     global draw_surface
     saved_surface = draw_surface
@@ -958,17 +1059,57 @@ def build_menu_surface():
     menu_surface = pygame.Surface((WIDTH, HEIGHT))
     draw_surface = menu_surface
 
-    fill_polygon_scanline(
-        [(0, 0), (WIDTH - 1, 0), (WIDTH - 1, HEIGHT - 1), (0, HEIGHT - 1)],
-        (20, 20, 30),
-    )
-    draw_circle(600, 150, 50, (255,255,255))
-    draw_ellipse(150, 100, 60, 30, (255,182,193))
-    draw_line(0, 500, 800, 500, (255,255,255))
-    flood_fill(600,150,(20,20,30),(200,200,255))
-    draw_text_bitmap_centered(250, "SONHOS EM CONSTRUCAO", (255, 255, 255), scale=3)
-    draw_text_bitmap_centered(320, "PRESSIONE ENTER", (255, 255, 255), scale=2)
-    draw_text_bitmap_centered(355, "APERTE ESC PARA SAIR", (220, 220, 255), scale=2)
+    # Desenha céu noturno com gradiente
+    draw_night_sky()
+    
+    # Adiciona estrelas
+    draw_stars(120)
+    
+    # Desenha lua cheia no canto superior direito
+    draw_moon(700, 100, 60)
+    
+    # Adiciona algumas nuvens no ceu
+    draw_cloud(130, 170, scale=1.1)
+    draw_cloud(500, 140, scale=0.95)
+    draw_cloud(660, 260, scale=1.2)
+    
+    # Desenha a casa no lado esquerdo, maior e mais perto do chao
+    #draw_house(42, 290, scale=2.3)
+
+    # Desenha a imagem da casa (casaluna.png)
+    draw_px = set_pixel
+
+    for dx in range(casa_w):
+        for dy in range(casa_h):
+            color = casa_cache[dx][dy]
+
+            # desenha apenas pixels não transparentes
+            if color[3] > 128:
+                draw_px(-25 + dx, 180 + dy, color)
+    
+
+    # Texto do menu - Titulo (maior e mais distante das nuvens)
+    draw_text_bitmap_centered(40, "SONHOS EM CONSTRUÇÃO", (255, 255, 200), scale=4)
+    
+    # Texto da historia
+    history_lines = [
+        "Venha acompanhar Luna na jornada dos seus sonhos:",
+        "pelo ceu azul, onde tudo parecia possivel,",
+        "atravessando o espaco, enfrentando medos e incertezas,",
+        "ate encontrar um mundo de doces,",
+        "onde, pouco a pouco, constroi seus mais belos sonhos."
+    ]
+    
+    y_pos = 200
+    for line in history_lines:
+        draw_text_bitmap(250, y_pos, line, (200, 220, 255), scale=1)
+        y_pos += 35
+    
+    # Botao e instrucoes (mais perto do chao)
+    draw_rect_outline(230, 480, 340, 50, (150, 180, 225))
+    draw_text_bitmap_centered(505, "PRESSIONE ENTER PARA COMECAR", (200, 220, 255), scale=1)
+    
+    draw_text_bitmap_centered(545, "APERTE ESC PARA SAIR", (180, 190, 220), scale=1)
 
     draw_surface = saved_surface
     return menu_surface
@@ -985,10 +1126,9 @@ def build_win_surface():
     win_surface = pygame.Surface((WIDTH, HEIGHT))
     draw_surface = win_surface
 
-    fill_polygon_scanline(
-        [(0, 0), (WIDTH - 1, 0), (WIDTH - 1, HEIGHT - 1), (0, HEIGHT - 1)],
-        (20, 20, 30),
-    )
+    draw_night_sky()
+    draw_stars(120)
+
     draw_rect_outline(120, 180, 560, 220, (120, 150, 220))
     draw_text_bitmap_centered(235, "SONHO COMPLETO!", (255, 255, 255), scale=3)
     draw_text_bitmap_centered(300, "APERTE R PARA REINICIAR", (200, 220, 255), scale=2)
@@ -1008,10 +1148,9 @@ def build_dead_surface():
     dead_surface = pygame.Surface((WIDTH, HEIGHT))
     draw_surface = dead_surface
 
-    fill_polygon_scanline(
-        [(0, 0), (WIDTH - 1, 0), (WIDTH - 1, HEIGHT - 1), (0, HEIGHT - 1)],
-        (25, 15, 20),
-    )
+    draw_night_sky()
+    draw_stars(120)
+
     draw_rect_outline(120, 180, 560, 220, (220, 120, 120))
     draw_text_bitmap_centered(235, "VOCE CAIU!", (255, 210, 210), scale=3)
     draw_text_bitmap_centered(300, "APERTE R PARA REINICIAR", (240, 240, 255), scale=2)
