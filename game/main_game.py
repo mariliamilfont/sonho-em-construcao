@@ -58,10 +58,10 @@ pygame.mixer.init()
 
 # ================== MUSICA ==================
 pygame.mixer.music.load("assets/music/musica.mp3")
-pygame.mixer.music.set_volume(0.2)  # volume de 0.0 até 1.0
-pygame.mixer.music.play(-1)  # -1 = loop infinito
+pygame.mixer.music.set_volume(0.2)  
+pygame.mixer.music.play(-1)  # loop infinito
 
-# ================== JANELA E VIEWPORT ==================
+# ================== VIEWPORT ==================
 # Coordenadas de Dispositivo (Tela): 800x600 pixels
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
