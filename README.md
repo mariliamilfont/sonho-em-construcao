@@ -13,6 +13,12 @@ Cada fase representa desafios, medos e conquistas da personagem, utilizando conc
 
 ---
 
+# Video do Jogo
+
+https://drive.google.com/drive/folders/1oT53w91N5p2NKCjRhAvpPENtjZEamY-3?usp=drive_link
+
+---
+
 # Funcionalidades do Jogo
 
 - Sistema de menu inicial
